@@ -18,6 +18,7 @@ class CBase(object):
 
     __table__ = None
     ex_time = 24 * 60 * 60
+    no_save_redis = 0
 
     created_at = Column(Integer, default=0)
     updated_at = Column(Integer, default=0)
@@ -58,6 +59,8 @@ def before_update(mapper, connection, target):
 
 @event.listens_for(CBase, 'after_update', propagate=True)
 def after_update(mapper, connection, target):
+    if hasattr(target, "no_save_redis"):
+        return
     target.save_to_redis()
 
 
@@ -71,11 +74,15 @@ def before_insert(mapper, connection, target):
 
 @event.listens_for(CBase, 'after_insert', propagate=True)
 def after_insert(mapper, connection, target):
+    if hasattr(target, "no_save_redis"):
+        return
     target.save_to_redis()
 
 
 @event.listens_for(CBase, 'after_delete', propagate=True)
 def after_delete(mapper, connection, target):
+    if hasattr(target, "no_save_redis"):
+        return
     target.delete_from_redis()
 
 

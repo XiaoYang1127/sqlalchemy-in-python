@@ -18,7 +18,7 @@ def GetRedisConn(db=0):
         connection_pool = redis.ConnectionPool(
             max_connections=50, host=redis_host,
             port=redis_port, socket_keepalive=True,
-            db=db, password="mxworld2006999", decode_responses=True)
+            db=db, password="your password", decode_responses=True)
         conn = CRedisConn(db=db, connection_pool=connection_pool)
         g_redis_conn[db] = conn
 
