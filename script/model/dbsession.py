@@ -28,9 +28,9 @@ class CDBSession(object):
         host = "127.0.0.1"
         port = 3306
         user = "root"
-        passwd = "mxworld2006999"
+        passwd = "your password"
         charset = "utf8mb4"
-        dbname = "router_server"
+        dbname = "your dbname"
         return "mysql+pymysql://%s:%s@%s:%s/%s?charset=%s" % (user, passwd, host, port, dbname, charset)
 
     def create_engine(self):
@@ -44,7 +44,7 @@ class CDBSession(object):
         """
         return create_engine(
             self.get_config(), pool_size=100, max_overflow=100,
-            pool_recycle=-1, pool_timeout=3, echo=False,
+            pool_recycle=3600, pool_timeout=3, echo=False,
             pool_pre_ping=True
         )
 
