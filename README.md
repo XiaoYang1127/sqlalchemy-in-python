@@ -15,7 +15,7 @@
 
 ## 3. 安装
 
-- 安装 python3.7
+- 安装 python3.7.5
 - 安装依赖
   - cd sqlalchemy-in-python
   - python3 -m venv venv
