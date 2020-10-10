@@ -68,6 +68,13 @@ class CDBSession(object):
     def query(self, *entities, **kwargs):
         return self.get_session().query(*entities, **kwargs)
 
+    def delete(self, instance):
+        return self.get_session().delete(instance)
+
+    def delete_all(self, instances):
+        for instance in instances:
+            self.delete(instance)
+
     def execute(self, clause, params=None, mapper=None, bind=None, **kw):
         try:
             return self.get_session().execute(clause, params=params, mapper=mapper, bind=bind, **kw)

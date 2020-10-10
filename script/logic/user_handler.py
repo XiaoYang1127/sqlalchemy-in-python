@@ -272,12 +272,18 @@ class CUserHandler(logic.base.CBase):
         self.response_to_web(response_data)
 
     def delete_user_by_id(self):
-        user_id = self.m_query_params.get('user_id', 0)
-
         # for orm delete
+        # user_id = self.m_query_params.get('user_id', 0)
+        # session = model.dbsession.Instance()
+        # query_model = session.query(CUserModel).filter(CUserModel.id == user_id)
+        # query_model.delete()
+        # session.commit()
+
+        # for session delete
+        user_name = self.m_query_params.get('user_name', 0)
         session = model.dbsession.Instance()
-        query = session.query(CUserModel).filter(CUserModel.id == user_id)
-        query.delete()
+        users = session.query(CUserModel).filter(CUserModel.name == user_name)
+        session.delete_all(users)
         session.commit()
 
         # for response
