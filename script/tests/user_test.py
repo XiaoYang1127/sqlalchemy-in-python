@@ -6,12 +6,12 @@ import threading
 import httpserver.http_client as http_client
 
 
-URL = "http://192.168.122.129:5088"
+URL = "http://localhost:5088"
 
 
 def do_user_test():
-    count = 10000
-    # add_class()
+    count = 1
+    add_class()
     for i in range(count):
         threading.Thread(target=add_user_by_sql_exp, args=(count,)).start()
 

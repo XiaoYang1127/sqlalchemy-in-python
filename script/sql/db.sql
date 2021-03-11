@@ -1,3 +1,7 @@
+drop database if exists orm_test;
+create database orm_test default charset utf8 collate utf8_general_ci;
+use orm_test;
+
 DROP TABLE IF EXISTS `test_user`;
 
 CREATE TABLE `test_user` (
