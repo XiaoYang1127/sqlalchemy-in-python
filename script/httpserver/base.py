@@ -3,33 +3,44 @@
 
 import json
 import time
-import functools
+import urllib
+from functools import partial
 
+import concurrent.futures
+import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
+import tornado.web
 
 
 class CBaseHandler(tornado.web.RequestHandler):
+    executor = concurrent.futures.ThreadPoolExecutor(10)
 
     def __init__(self, application, request, **kwargs):
-        tornado.web.RequestHandler.__init__(self, application, request, **kwargs)
+        tornado.web.RequestHandler.__init__(
+            self, application, request, **kwargs)
         self.m_query_params = {}
-        self.__timeout = self.ioloop().add_timeout(int(time.time()) + 30, functools.partial(self.simple_response, 408))
+        self.__timeout = self.ioloop().add_timeout(
+            int(time.time()) + 30, partial(self.simple_response, 408))
+
+    def ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
 
     def is_valid_request(self):
         return 1
+
+    def get_query_params(self):
+        return self.m_query_params
+
+    def request_summary(self):
+        url = urllib.parse.unquote(self.request.uri)
+        return "%s %s (%s)" % (self.request.method, url, self.request.remote_ip)
 
     def headers(self):
         return self.request.headers
 
     def get_headers(self, key, default=None):
         return self.headers().get(key, default)
-
-    def get_query_params(self):
-        return self.m_query_params
-
-    def ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
 
     @tornado.web.asynchronous
     def head(self, *args, **kwargs):
@@ -40,7 +51,7 @@ class CBaseHandler(tornado.web.RequestHandler):
 
     @tornado.web.asynchronous
     def get(self, *args, **kwargs):
-        self.do_get(*args, **kwargs)
+        self.ioloop().add_callback(self.do_get, *args, **kwargs)
 
     def do_get(self, *args, **kwargs):
         self.simple_response(405)

@@ -13,12 +13,15 @@ def GetRedisConn(db=0):
     global g_redis_conn
     conn = g_redis_conn.get(db)
     if not conn:
-        redis_host = "localhost"
-        redis_port = 6379
         connection_pool = redis.ConnectionPool(
-            max_connections=50, host=redis_host,
-            port=redis_port, socket_keepalive=True,
-            db=db, password="your password", decode_responses=True)
+            max_connections=50,
+            host="localhost",
+            port=6379,
+            socket_keepalive=True,
+            db=db,
+            password="mxworld2006999",
+            decode_responses=True
+        )
         conn = CRedisConn(db=db, connection_pool=connection_pool)
         g_redis_conn[db] = conn
 
@@ -36,10 +39,10 @@ class CRedisConn(redis.Redis):
         result = self.set(key, value, ex)
         return result
 
-    def myget(self, key, default_value=None, serialize=False):
+    def myget(self, key, default=None, serialize=False):
         result = self.get(key)
         if not result:
-            return default_value
+            return default
         if serialize:
             result = pickle.loads(result.encode('latin1'))
         return result

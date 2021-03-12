@@ -1,15 +1,17 @@
 #!/usr/local/env python
 # _*_ coding:utf-8 _*_
 
+from tornado.log import access_log
+
 import threading
 import requests
 
 
 def http_request(method, url, callback=None, **kwargs):
-    hc = CHttpClient(method, url, **kwargs)
+    client = CHttpClient(method, url, **kwargs)
     if callback:
-        hc.set_callback(callback)
-    hc.start()
+        client.set_callback(callback)
+    client.start()
 
 
 class CHttpClient(threading.Thread):
@@ -41,21 +43,23 @@ class CHttpClient(threading.Thread):
         :param data: 可以是字典，可以是字符串，可以是字节, 可以是文件对象
         :param json: 将json中对应的数据进行序列化成一个字符串，发送到服务器端的body中
         :param headers: 发送请求头到服务器端
-                        # 文件操作，"Content-Type": "application/form-data",
-                        # json请求，"content-type": "application/json"
+            - 文件操作，"Content-Type": "application/form-data",
+            - json请求，"content-type": "application/json"
         :param cookies: 发送Cookie到服务器端
         :param files: 发送文件
         :param proxies: 代理地址，字典类型，key为协议，value为地址
-                        # "http": "61.172.249.96:80",
+            - "http": "61.172.249.96:80",
         :return:
         """
         while self.m_retry:
             try:
-                response = requests.request(self.m_method, self.m_url, **self.m_kwargs)
+                response = requests.request(
+                    self.m_method, self.m_url, **self.m_kwargs)
                 self.m_result = True
                 self.m_content = response.json()
             except Exception as e:
-                print("%s.run requst failed err_msg:%s" % (self.__class__.__name__, str(e)))
+                access_log.error("%s.run requst failed err_msg:%s" %
+                                 (self.__class__.__name__, str(e)))
             finally:
                 self.m_retry -= 1
 
@@ -63,6 +67,8 @@ class CHttpClient(threading.Thread):
 
     def finish(self):
         if not self.m_result:
-            print("%s.finish failed url:%s content:%s" % (self.__class__.__name__, self.m_url, self.m_content))
+            access_log.error(
+                "%s.finish failed url:%s content:%s" %
+                (self.__class__.__name__, self.m_url, self.m_content))
 
         self.callback(self.m_result, self.m_content)

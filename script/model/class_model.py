@@ -1,17 +1,12 @@
 
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
 
-import model.base
-
-
-CBase = declarative_base()
+from model.base import Base
 
 
-class CClassModel(model.base.CBase, CBase):
+class CClassModel(Base):
     __tablename__ = "test_class"
 
-    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, comment="班级id")
     name = Column(String(50), nullable=False, comment="班级名称")
 
     def save(self):

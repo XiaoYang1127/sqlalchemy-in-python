@@ -8,6 +8,7 @@ import traceback
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
+from tornado.log import access_log
 
 import httpserver.application
 
@@ -20,18 +21,24 @@ class CHttpServer(threading.Thread):
         self.m_http_server = None
 
     def make_app(self):
-        return tornado.web.Application(httpserver.application.HANDLERS, log_function=self.LogRequest)
+        return tornado.web.Application(
+            httpserver.application.HANDLERS,
+            log_function=self.LogRequest,
+            autoreload=True,
+        )
 
     def run(self):
         try:
-            print("HTTP_SERVER started，http_port:%d" % self.m_http_port)
-            self.m_http_server = tornado.httpserver.HTTPServer(self.make_app(), xheaders=True)
+            access_log.info("HTTP_SERVER started，http_port:%d" %
+                            self.m_http_port)
+            self.m_http_server = tornado.httpserver.HTTPServer(
+                self.make_app(), xheaders=True)
             self.m_http_server.listen(self.m_http_port)
             tornado.ioloop.IOLoop.instance().start()
-        except:
+        except Exception:
             try:
                 traceback.print_exc()
-            except:
+            except Exception:
                 pass
 
             pid = os.getpid()
@@ -39,12 +46,14 @@ class CHttpServer(threading.Thread):
 
     def LogRequest(self, handler):
         request_time = 1000.0 * handler.request.request_time()
-        if request_time >= 1000:
-            print("api: %s timeout %.2fms" % (handler._request_exec_summary(), request_time))
+        access_log.info("%d %s %.2fms" %
+                        (handler.get_status(),
+                         handler.request_summary(),
+                         request_time))
 
 
 # 初始化
-if not "g_http_server" in globals():
+if "g_http_server" not in globals():
     g_http_server = None
 
 

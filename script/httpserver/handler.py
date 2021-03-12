@@ -44,8 +44,9 @@ class CRequestHandler(httpserver.base.CBaseHandler):
                     json_body = tornado.escape.json_decode(self.request.body)
                     for k, v in json_body.items():
                         self.m_query_params[k.lower()] = v
-                except:
-                    self.simple_response(500, "body json decoded fail")
+                except Exception as e:
+                    self.simple_response(
+                        500, f"body json decoded fail {str(e)}")
                     return
             else:
                 for key in self.request.body_arguments.keys():

@@ -1,7 +1,7 @@
 """
 note:
-    1. Insert, Update, Delete by sql expression cant't be to listen by events
-    2. the differences between in "update" and "update exists"
+    1. Insert, Update, Delete by sql expression cant't be listened by ``events``
+    2. attention the differences between in "update" and "update exists"
     3. delete exists, delete where, delete join(left, right, inner)
 """
 
@@ -10,18 +10,22 @@ import time
 from sqlalchemy import Column, Integer, event
 from sqlalchemy.sql.expression import Insert, Update, Delete, Select
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.ext.declarative import declarative_base
 
 import db.redis_db
 
 
 class CBase(object):
 
-    __table__ = None
     ex_time = 24 * 60 * 60
     no_save_redis = 0
     skip_created_at = 0
     skip_updated_at = 0
 
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    __mapper_args__ = {'always_refresh': True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
     created_at = Column(Integer, default=0)
     updated_at = Column(Integer, default=0)
 
@@ -34,11 +38,18 @@ class CBase(object):
     def save_to_redis(self):
         to_save = self.save()
         redis_client = db.redis_db.GetRedisConn()
-        redis_client.myset("%s:%s" % (self.__table__, self.id), to_save, ex=self.ex_time, serialize=True)
+        redis_client.myset(
+            "%s:%s" % (self.__table__, self.id),
+            to_save,
+            ex=self.ex_time,
+            serialize=True)
 
     def load_from_redis(self, unique_id):
         redis_client = db.redis_db.GetRedisConn()
-        from_load = redis_client.myget("%s:%s" % (self.__table__, unique_id), {}, serialize=True)
+        from_load = redis_client.myget(
+            "%s:%s" % (self.__table__, unique_id),
+            {},
+            serialize=True)
         self.load(from_load)
 
     def delete_from_redis(self):
@@ -50,6 +61,9 @@ class CBase(object):
 
     def to_dict(self):
         return {col.name: getattr(self, col.name, None) for col in self.tbl_cols()}
+
+
+Base = declarative_base(cls=CBase)
 
 
 @event.listens_for(CBase, 'before_update', propagate=True)

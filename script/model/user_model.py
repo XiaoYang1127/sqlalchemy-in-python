@@ -1,21 +1,16 @@
 
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
 
-import model.base
-
-
-CBase = declarative_base()
+from model.base import CBase, Base
 
 
-class CUserModel(model.base.CBase, CBase):
+class CUserModel(Base):
     __tablename__ = "test_user"
 
-    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, comment="用户id")
     class_id = Column(Integer, nullable=False, comment="班级id")
     name = Column(String(50), nullable=False, comment="用户名称")
     age = Column(Integer, default=0, comment="年龄")
-    addr = Column(String(1000), nullable=True, comment="地址")
+    addr = Column(String(255), nullable=True, comment="地址")
     tele = Column(String(50), unique=True, nullable=True, comment="手机号")
 
     def save(self):
