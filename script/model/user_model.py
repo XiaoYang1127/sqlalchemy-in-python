@@ -1,10 +1,10 @@
 
 from sqlalchemy import Column, Integer, String
 
-from model.base import CBase, Base
+from model import Base, CTimestampMixin
 
 
-class CUserModel(Base):
+class CUserModel(Base, CTimestampMixin):
     __tablename__ = "test_user"
 
     class_id = Column(Integer, nullable=False, comment="班级id")
@@ -12,6 +12,9 @@ class CUserModel(Base):
     age = Column(Integer, default=0, comment="年龄")
     addr = Column(String(255), nullable=True, comment="地址")
     tele = Column(String(50), unique=True, nullable=True, comment="手机号")
+
+    def __repr__(self):
+        return f"<{self.id}.{self.name}> in {self.__tablename__}"
 
     def save(self):
         to_save = {

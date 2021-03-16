@@ -22,7 +22,7 @@
 ## 4. 运行配置
 
 - 执行 z_sql/db.sql 语句，重建数据库与数据表
-- 修改[代码](./script/model/dbsession.py) 里面的 `passwd = "your password"`，该你的 mysql 密码
+- 修改[代码](./script/db/orm_db.py) 里面的 `passwd = "your password"`，该你的 mysql 密码
 - 修改[代码](./script/db/redis_db.py) 里面的 `password="your password"`，为你的 redis 密码
 - 运行主进程
   - cd script

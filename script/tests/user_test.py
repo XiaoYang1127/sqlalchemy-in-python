@@ -11,18 +11,24 @@ URL = "http://localhost:5088"
 
 
 def do_user_test():
-    add_class_by_sql_exp()
+    # count = 10
+    # for i in range(count):
+    #     add_class_by_sql_exp(i)
 
-    count = 1
-    for i in range(count):
-        threading.Thread(target=add_user_by_sql_exp, args=(count,)).start()
-    for i in range(count):
-        threading.Thread(target=get_user_by_id, args=(count,)).start()
-    for i in range(count):
-        threading.Thread(target=query_user_by_id, args=(count,)).start()
+    # for i in range(count):
+    #     add_user_by_sql_exp(i)
+    #     add_user_by_orm(i)
+
+    # for i in range(count):
+    #     threading.Thread(target=get_user_by_id, args=(count,)).start()
+    # for i in range(count):
+    #     threading.Thread(target=query_user_by_id, args=(count,)).start()
+
+    # add_relation()
+    query_user_by_id(1)
 
 
-def add_class_by_sql_exp():
+def add_relation():
     url = "%s/v1/api/user" % URL
     headers = {
         "content-type": "application/json",
@@ -30,7 +36,22 @@ def add_class_by_sql_exp():
     }
 
     post_data = {
-        "method": "add_class_by_sql_exp"
+        "method": "add_relation",
+    }
+    http_client.http_request("post", url, headers=headers,
+                             json=post_data, callback=test_http_back)
+
+
+def add_class_by_sql_exp(i):
+    url = "%s/v1/api/user" % URL
+    headers = {
+        "content-type": "application/json",
+        "secret_key": "secret_key",
+    }
+
+    post_data = {
+        "method": "add_class_by_sql_exp",
+        "name": "class_%s" % i
     }
     http_client.http_request("post", url, headers=headers,
                              json=post_data, callback=test_http_back)
@@ -45,7 +66,7 @@ def add_user_by_orm(i=1):
 
     post_data = {
         "method": "add_user",
-        "name": "liuliu_%d" % i,
+        "name": "orm_liuliu_%d" % i,
         "age": 20 + i,
         "tele": 11234 + i,
         "addr": "guangzhou"
@@ -63,6 +84,7 @@ def add_user_by_sql_exp(i=1):
 
     post_data = {
         "method": "add_user_by_sql_exp",
+        "class_id": i + 1,
         "name": "caocao_%d" % i,
         "age": 40 + i,
         "tele": 44567 + i,

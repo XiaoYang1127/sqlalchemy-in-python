@@ -1,7 +1,7 @@
 #!/usr/local/env python
 # _*_ coding:utf-8 _*_
 
-import time
+import datetime
 
 from sqlalchemy.sql import(
     select, delete, insert, update,
@@ -10,13 +10,11 @@ from sqlalchemy.sql import(
     func, label,
     exists, distinct, literal, join, text
 )
-from sqlalchemy.dialects.mysql import insert as insert2
+from sqlalchemy.dialects.mysql import insert as dialects_insert
 from tornado.log import access_log
 
 from logic.base import CBase
-from model.dbsession import CSession
-from model.user_model import CUserModel
-from model.class_model import CClassModel
+from model import CSession, CClassModel, CUserModel, CUser, CRole
 
 
 class CUserHandler(CBase):
@@ -26,12 +24,67 @@ class CUserHandler(CBase):
 
     def do_get(self, *args, **kwargs):
         method = self.m_query_params.get("method", "")
-        func = getattr(self, method, None)
+        get_func = getattr(self, method, None)
         try:
-            func()
+            get_func()
         except Exception as e:
             access_log.exception("do_get failed:%s" % str(e))
             self.simple_response(404)
+
+    def add_relation(self):
+        with CSession() as session:
+            u = CUser(name='tobi', age=200)
+
+            r1 = CRole(name='admin')
+            r2 = CRole(name='user')
+
+            u.role = r1
+            u.second_role = r2
+
+            session.add(u)
+            session.commit()
+
+            # 查询（对于外键关联的关系属性可以直接访问，在需要用到的时候session会到数据库查询）
+            roles = session.query(CRole).all()
+            for role in roles:
+                for user in role.users:
+                    print('\t{0}'.format(user))
+
+                for user in role.second_users:
+                    print('\t{0}'.format(user))
+
+        self.response_to_web({
+            "method": "add_relation"
+        })
+
+    def check_user_exists(self):
+        user_id = self.m_query_params.get("user_id", None)
+
+        with CSession() as session:
+            is_exists = session.query(CUserModel.id).filter(
+                CUserModel.id == user_id
+            ).one_or_none()
+
+            # for response
+            response_data = {
+                "status_code": 200,
+                "message": "success",
+                "payload": {
+                    "user_id": user_id,
+                    "data": is_exists,
+                    "method": "check_user_exists",
+                },
+            }
+            self.response_to_web(response_data)
+
+    def session_execute(self):
+        user_id = self.m_query_params.get("user_id", None)
+        with CSession() as session:
+            session.execute('select * from User')
+            session.execute("insert into User(name, age) values('bomo', 13)")
+            session.execute(
+                "insert into User(name, age) values(:name, :age)",
+                {'name': 'bomo', 'age': 12})
 
     def get_user_by_id(self):
         user_id = self.m_query_params.get("user_id", None)
@@ -149,7 +202,7 @@ class CUserHandler(CBase):
                 return sql_exp
 
             # 6. count, max, min, now相关的时间, random (select 1, select ifnull)
-            def func():
+            def db_func():
                 sql_exp = select([func.count(CUserModel.id)])
 
                 sql_exp = select([func.max(CUserModel.id)])
@@ -221,7 +274,16 @@ class CUserHandler(CBase):
 
                 return sql_exp
 
-            sql_exp = simple_query()
+            def do_join():
+                sql_exp = session.query(CUserModel).join(
+                    CClassModel, CUserModel.class_id == CClassModel.id
+                ).filter(
+                    CUserModel.id == user_id
+                )
+
+                return sql_exp
+
+            sql_exp = do_join()
             result_proxy = session.execute(sql_exp)
 
             # for response
@@ -237,22 +299,19 @@ class CUserHandler(CBase):
 
     def do_post(self, *args, **kwargs):
         method = self.m_query_params.get("method", "")
-        func = getattr(self, method, None)
+        post_func = getattr(self, method, None)
         try:
-            func()
+            post_func()
         except Exception as e:
             access_log.exception("do_post failed:%s" % str(e))
             self.simple_response(404)
 
     def add_class(self):
-        # for orm add
         with CSession() as session:
-            _class = CClassModel(
+            new_model = CClassModel(
                 name=self.m_query_params.get("name", "ruanjian"),
-                created_at=int(time.time()),
-                updated_at=int(time.time()),
             )
-            session.add(_class)
+            session.add(new_model)
             session.commit()
 
             # for response
@@ -260,22 +319,21 @@ class CUserHandler(CBase):
                 "status_code": 200,
                 "message": "success",
                 "payload": {
-                    "data": _class.serialize_simple()
+                    "data": new_model.serialize_simple()
                 },
             }
             self.response_to_web(response_data)
 
     def add_class_by_sql_exp(self):
         name = self.m_query_params.get("name", "ruanjian")
-        created_at = int(time.time())
-        updated_at = int(time.time())
+        now = datetime.datetime.now()
 
         with CSession() as session:
             exists_sql = select([1]).where(CClassModel.name == name)
             select_sql = select([
                 literal(name),
-                literal(created_at),
-                literal(updated_at)
+                literal(now),
+                literal(now)
             ]).where(~exists(exists_sql))
 
             sql_exp = insert(CClassModel).from_select([
@@ -300,7 +358,6 @@ class CUserHandler(CBase):
             self.response_to_web(response_data)
 
     def add_user(self):
-        # for orm add
         with CSession() as session:
             user = CUserModel(
                 class_id=self.m_query_params.get("class_id", 1),
@@ -329,8 +386,8 @@ class CUserHandler(CBase):
         age = self.m_query_params.get("age", 31)
         addr = self.m_query_params.get("addr", "hankou")
         tele = self.m_query_params.get("tele", "4566")
+        now = datetime.datetime.now()
 
-        # for sql expression add
         with CSession() as session:
             # 1. simple insert
             def simple_insert():
@@ -385,7 +442,7 @@ class CUserHandler(CBase):
             # # 4. on duplicate key
             # def on_duplicate_key():
             #     insert_for_update = "name='%s',age=%d,addr='%s',updated_at=%s" % (
-            #         name, age, addr, int(time.time()))
+            #         name, age, addr, now)
             #     sql_exp = insert(
             #         CUserModel,
             #         insert_for_update=insert_for_update
@@ -395,27 +452,27 @@ class CUserHandler(CBase):
             #         age=age,
             #         addr=addr,
             #         tele=tele,
-            #         created_at=int(time.time()),
-            #         updated_at=int(time.time()),
+            #         created_at=now,
+            #         updated_at=now,
             #     )
 
             #     return sql_exp
 
             # 5. on duplicate key
             def on_duplicate_key2():
-                sql_exp = insert2(CUserModel).values(
+                sql_exp = dialects_insert(CUserModel).values(
                     class_id=class_id,
                     name=name,
                     age=age,
                     addr=addr,
                     tele=tele,
-                    created_at=int(time.time()),
-                    updated_at=int(time.time()),
+                    created_at=now,
+                    updated_at=now,
                 ).on_duplicate_key_update(
                     name=name,
                     age=age,
                     addr=addr,
-                    updated_at=int(time.time()),
+                    updated_at=now,
                 )
 
                 return sql_exp

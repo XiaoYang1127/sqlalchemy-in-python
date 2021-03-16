@@ -1,10 +1,10 @@
 
 from sqlalchemy import Column, Integer, String
 
-from model.base import Base
+from model import Base, CTimestampMixin
 
 
-class CClassModel(Base):
+class CClassModel(Base, CTimestampMixin):
     __tablename__ = "test_class"
 
     name = Column(String(50), nullable=False, comment="班级名称")

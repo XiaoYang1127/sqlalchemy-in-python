@@ -8,6 +8,7 @@ import traceback
 
 from tornado.options import define, parse_command_line
 
+import model
 import httpserver.http_server
 import tests.start
 
@@ -41,6 +42,7 @@ def init_log():
 
 def base_init():
     init_log()
+    model.init_model()
 
 
 def main():

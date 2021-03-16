@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 
-def get_db_config():
+def db_url():
     host = "127.0.0.1"
     port = 3306
     user = "root"
@@ -21,13 +21,9 @@ def get_db_config():
         user, passwd, host, port, dbname, charset)
 
 
-engine = create_engine(
-    get_db_config(), pool_size=100, max_overflow=100,
-    pool_recycle=3600, pool_timeout=3, echo=False,
-    pool_pre_ping=True
-)
-
-session_factory = scoped_session(sessionmaker(bind=engine))
+def mysql_engine():
+    global engine
+    return engine
 
 
 class CSession():
@@ -36,6 +32,7 @@ class CSession():
         self.session = None
 
     def __enter__(self):
+        global session_factory
         self.session = session_factory()
         return self.session
 
@@ -43,3 +40,14 @@ class CSession():
         if self.session:
             self.session.close()
             self.session = None
+
+
+# 初始化
+if not "g_orm_db" in globals():
+    g_orm_db = 1
+    engine = create_engine(
+        db_url(), pool_size=100, max_overflow=100,
+        pool_recycle=3600, pool_timeout=3, echo=False,
+        pool_pre_ping=True
+    )
+    session_factory = scoped_session(sessionmaker(bind=engine))

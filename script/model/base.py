@@ -5,29 +5,47 @@ note:
     3. delete exists, delete where, delete join(left, right, inner)
 """
 
-import time
 
-from sqlalchemy import Column, Integer, event
+from sqlalchemy import Column, Integer, DateTime, event, func, ForeignKey
 from sqlalchemy.sql.expression import Insert, Update, Delete, Select
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base, declared_attr
 
 import db.redis_db
 
 
+class CTimestampMixin(object):
+    skip_created_at = 0
+    skip_updated_at = 0
+
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now())
+
+
 class CBase(object):
+    """
+    1. Column构造函数相关设置
+        name：名称
+        type_：列类型
+        autoincrement：自增
+        default：默认值
+        index：索引
+        nullable：可空
+        primary_key：是否主键
+
+    """
 
     ex_time = 24 * 60 * 60
     no_save_redis = 0
-    skip_created_at = 0
-    skip_updated_at = 0
 
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __mapper_args__ = {'always_refresh': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    created_at = Column(Integer, default=0)
-    updated_at = Column(Integer, default=0)
+
+    @classmethod
+    def create_table(self, engine):
+        self.metadata.create_all(engine)
 
     def save(self):
         raise NotImplementedError("save undefined")
@@ -66,11 +84,22 @@ class CBase(object):
 Base = declarative_base(cls=CBase)
 
 
-@event.listens_for(CBase, 'before_update', propagate=True)
+@event.listens_for(CTimestampMixin, 'before_update', propagate=True)
 def before_update(mapper, connection, target):
+    """
+    only listen for operations performed in ``ORM`` mode
+    """
     if target.skip_updated_at:
         return
-    target.updated_at = int(time.time())
+    target.updated_at = func.now()
+
+
+@event.listens_for(CTimestampMixin, 'before_insert', propagate=True)
+def before_insert(mapper, connection, target):
+    if target.skip_created_at:
+        return
+    target.created_at = func.now()
+    target.updated_at = func.now()
 
 
 @event.listens_for(CBase, 'after_update', propagate=True)
@@ -78,14 +107,6 @@ def after_update(mapper, connection, target):
     if target.no_save_redis:
         return
     target.save_to_redis()
-
-
-@event.listens_for(CBase, 'before_insert', propagate=True)
-def before_insert(mapper, connection, target):
-    if target.skip_created_at:
-        return
-    target.created_at = int(time.time())
-    target.updated_at = int(time.time())
 
 
 @event.listens_for(CBase, 'after_insert', propagate=True)
