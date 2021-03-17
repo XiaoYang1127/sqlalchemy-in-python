@@ -14,7 +14,7 @@ from sqlalchemy.dialects.mysql import insert as dialects_insert
 from tornado.log import access_log
 
 from logic.base import CBase
-from model import CSession, CClassModel, CUserModel, CUser, CRole
+from model import CSession, CClassModel, CUserModel, CCompany, CPhone
 
 
 class CUserHandler(CBase):
@@ -31,31 +31,95 @@ class CUserHandler(CBase):
             access_log.exception("do_get failed:%s" % str(e))
             self.simple_response(404)
 
-    def add_relation(self):
+    def add_relationship(self):
+        companys = {
+            "Apple": "Amercian",
+            "Xiaomi": "China",
+            "Huawei": "China",
+            "Sungsum": "Korea",
+            "Nokia": "Finland"
+        }
+        phones = (
+            ["iphoneX", 1, 8400],
+            ["xiaomi2s", 2, 3299],
+            ["Huaweimate10", 3, 3399],
+            ["SungsumS8", 4, 4099],
+            ["NokiaLumia", 5, 2399],
+            ["iphone4s", 1, 3800]
+        )
+
+        # add company
         with CSession() as session:
-            u = CUser(name='tobi', age=200)
-
-            r1 = CRole(name='admin')
-            r2 = CRole(name='user')
-
-            u.role = r1
-            u.second_role = r2
-
-            session.add(u)
+            for n, l in companys.items():
+                new_company = CCompany(
+                    name=n,
+                    location=l
+                )
+                session.add(new_company)
             session.commit()
 
-            # 查询（对于外键关联的关系属性可以直接访问，在需要用到的时候session会到数据库查询）
-            roles = session.query(CRole).all()
-            for role in roles:
-                for user in role.users:
-                    print('\t{0}'.format(user))
+        # add phone
+        with CSession() as session:
+            for name, company_id, price in phones:
+                new_phone = CPhone(
+                    name=name,
+                    price=price,
+                    company_id=company_id,
+                )
+                session.add(new_phone)
+            session.commit()
 
-                for user in role.second_users:
-                    print('\t{0}'.format(user))
+        # for response
+        response_data = {
+            "method": "add_relationship"
+        }
+        self.response_to_web(response_data)
 
-        self.response_to_web({
-            "method": "add_relation"
-        })
+    def query_relationship(self):
+        """
+        1. company是主表，phone是从表。查询phone表，返回phone_obj，可以通过phone_obj.Company查询到company中外键关联的数据。
+        查phone表返回company表里的数据。这个称之为：正向查询。
+
+        2. company是主表，phone是从表。查询company表，返回company_obj，可以通过company_obj.phone_of_company查询到phone表的外键关联数据。
+        查company表返回phone表里的数据。这个称之为：反向查询
+        """
+        phone_id = self.m_query_params.get("phone_id", None)
+        company_id = self.m_query_params.get("company_id", None)
+        data = {}
+
+        if phone_id:
+            with CSession() as session:
+                phone = session.query(CPhone).filter(
+                    CPhone.id == phone_id
+                ).first()
+
+                data = {
+                    "c_name": phone.company.name
+                }
+                data.update(phone.save())
+        elif company_id:
+            with CSession() as session:
+                company = session.query(CCompany).filter(
+                    CCompany.id == company_id
+                ).first()
+
+                data = {
+                    "p_name": [obj.name for obj in company.phone_of_company]
+                }
+                data.update(company.save())
+        else:
+            data = {}
+
+        # for response
+        response_data = {
+            "status_code": 200,
+            "message": "success",
+            "payload": {
+                "data": data,
+                "method": "query_user_by_id",
+            },
+        }
+        self.response_to_web(response_data)
 
     def check_user_exists(self):
         user_id = self.m_query_params.get("user_id", None)
@@ -76,15 +140,6 @@ class CUserHandler(CBase):
                 },
             }
             self.response_to_web(response_data)
-
-    def session_execute(self):
-        user_id = self.m_query_params.get("user_id", None)
-        with CSession() as session:
-            session.execute('select * from User')
-            session.execute("insert into User(name, age) values('bomo', 13)")
-            session.execute(
-                "insert into User(name, age) values(:name, :age)",
-                {'name': 'bomo', 'age': 12})
 
     def get_user_by_id(self):
         user_id = self.m_query_params.get("user_id", None)
@@ -109,180 +164,180 @@ class CUserHandler(CBase):
         user_id = self.m_query_params.get("user_id", None)
         tele = self.m_query_params.get("tele", None)
 
+        # 1. simple query
+        def simple_query():
+            sql_exp = select([
+                CUserModel.id,
+                CUserModel.name.label("user_name")
+            ]).where(
+                and_(CUserModel.id == user_id, CUserModel.tele == tele))
+            return sql_exp
+
+        # 2. complex query (==, >=, !=, <=, >, <) (offset, limit) (order_by, desc, asc)
+        def complex_query():
+            sql_exp = select([
+                CUserModel.id,
+                CUserModel.name
+            ]).where(
+                CUserModel.tele >= tele
+            ).offset(2).limit(3).order_by(
+                desc(CUserModel.updated_at), CUserModel.id
+            )
+
+        # 3. complex query2
+        # (and, or_, not_, like, notlike, in_, notin_)
+        def complex_query2():
+            sql_exp = select([
+                CUserModel.id,
+                CUserModel.name
+            ]).where(or_(
+                CUserModel.id == 9,
+                CUserModel.name.like("x%"),
+                not_(CUserModel.updated_at == 0)
+            ))
+
+            sql_exp = select([
+                CUserModel.id,
+                CUserModel.name
+            ]).where(or_(
+                CUserModel.id == 9,
+                CUserModel.name.notlike("x%"),
+                CUserModel.updated_at == 0
+            ))
+
+            sql_exp = select([
+                CUserModel.id,
+                CUserModel.name
+            ]).where(and_(
+                CUserModel.id.in_([1, 2, 3]),
+                CUserModel.age.notin_([27, ])
+            ))
+
+            return sql_exp
+
+        # 4. group by, having
+        def group_by():
+            sql_exp = select([
+                CUserModel.id,
+                CUserModel.name
+            ]).where(
+                CUserModel.tele == tele
+            ).group_by(
+                CUserModel.id
+            ).having(
+                func.sum(CUserModel.age) > 10
+            )
+
+            sql_exp = select([
+                CUserModel.name,
+                func.count("*").label("user_count")
+            ]).where(CUserModel.tele == tele).group_by(CUserModel.name)
+
+            sql_exp = select([
+                CUserModel.id,
+                func.sum(CUserModel.age).label("user_age_num")
+            ]).where(CUserModel.tele == tele).group_by(CUserModel.id)
+
+            return sql_exp
+
+        # 5. distinct (id)
+        def distinct():
+            sql_exp = select([
+                CUserModel.id,
+                CUserModel.name
+            ]).where(CUserModel.tele == tele).distinct()
+
+            sql_exp = select([
+                distinct(CUserModel.id),
+                CUserModel.name
+            ]).where(CUserModel.tele == tele)
+
+            return sql_exp
+
+        # 6. count, max, min, now相关的时间, random (select 1, select ifnull)
+        def db_func():
+            sql_exp = select([func.count(CUserModel.id)])
+
+            sql_exp = select([func.max(CUserModel.id)])
+
+            sql_exp = select([func.min(CUserModel.id)])
+
+            sql_exp = select([1]).where(CUserModel.tele == tele)
+
+            sql_exp = select([CUserModel]).where(CUserModel.tele == tele)
+
+            sql_exp = select([
+                CUserModel.id,
+                func.ifnull(CUserModel.created_at, 100)
+            ]).where(CUserModel.tele == tele)
+
+            return sql_exp
+
+        # 7. select exists
+        def select_exists():
+            exists_sql = select([1]).where(
+                CClassModel.id == CUserModel.class_id
+            )
+            sql_exp = select([
+                CUserModel.id,
+                CUserModel.name
+            ]).where(exists(exists_sql))
+
+            return sql_exp
+
+        # 8. join, outerjoin
+        def inner_join():
+            join_sql = join(
+                CUserModel,
+                CClassModel,
+                CUserModel.class_id == CClassModel.id
+            )
+            sql_exp = select([
+                CClassModel.name,
+                CUserModel.name
+            ]).select_from(join_sql)
+
+            return sql_exp
+
+        def left_join():
+            join_sql = join(
+                CUserModel,
+                CClassModel,
+                CUserModel.class_id == CClassModel.id,
+                isouter=True
+            )
+            sql_exp = select([
+                CClassModel.name,
+                CUserModel.name
+            ]).select_from(join_sql)
+
+            return sql_exp
+
+        def right_join():
+            join_sql = join(
+                CClassModel,
+                CUserModel,
+                CClassModel.id == CUserModel.class_id,
+                isouter=True
+            )
+            sql_exp = select([
+                CClassModel.name,
+                CUserModel.name
+            ]).select_from(join_sql)
+
+            return sql_exp
+
+        def do_join():
+            sql_exp = session.query(CUserModel).join(
+                CClassModel, CUserModel.class_id == CClassModel.id
+            ).filter(
+                CUserModel.id == user_id
+            )
+
+            return sql_exp
+
         # for sql expression query
         with CSession() as session:
-            # 1. simple query
-            def simple_query():
-                sql_exp = select([
-                    CUserModel.id,
-                    CUserModel.name.label("user_name")
-                ]).where(
-                    and_(CUserModel.id == user_id, CUserModel.tele == tele))
-                return sql_exp
-
-            # 2. complex query (==, >=, !=, <=, >, <) (offset, limit) (order_by, desc, asc)
-            def complex_query():
-                sql_exp = select([
-                    CUserModel.id,
-                    CUserModel.name
-                ]).where(
-                    CUserModel.tele >= tele
-                ).offset(2).limit(3).order_by(
-                    desc(CUserModel.updated_at), CUserModel.id
-                )
-
-            # 3. complex query2
-            # (and, or_, not_, like, notlike, in_, notin_)
-            def complex_query2():
-                sql_exp = select([
-                    CUserModel.id,
-                    CUserModel.name
-                ]).where(or_(
-                    CUserModel.id == 9,
-                    CUserModel.name.like("x%"),
-                    not_(CUserModel.updated_at == 0)
-                ))
-
-                sql_exp = select([
-                    CUserModel.id,
-                    CUserModel.name
-                ]).where(or_(
-                    CUserModel.id == 9,
-                    CUserModel.name.notlike("x%"),
-                    CUserModel.updated_at == 0
-                ))
-
-                sql_exp = select([
-                    CUserModel.id,
-                    CUserModel.name
-                ]).where(and_(
-                    CUserModel.id.in_([1, 2, 3]),
-                    CUserModel.age.notin_([27, ])
-                ))
-
-                return sql_exp
-
-            # 4. group by, having
-            def group_by():
-                sql_exp = select([
-                    CUserModel.id,
-                    CUserModel.name
-                ]).where(
-                    CUserModel.tele == tele
-                ).group_by(
-                    CUserModel.id
-                ).having(
-                    func.sum(CUserModel.age) > 10
-                )
-
-                sql_exp = select([
-                    CUserModel.name,
-                    func.count("*").label("user_count")
-                ]).where(CUserModel.tele == tele).group_by(CUserModel.name)
-
-                sql_exp = select([
-                    CUserModel.id,
-                    func.sum(CUserModel.age).label("user_age_num")
-                ]).where(CUserModel.tele == tele).group_by(CUserModel.id)
-
-                return sql_exp
-
-            # 5. distinct (id)
-            def distinct():
-                sql_exp = select([
-                    CUserModel.id,
-                    CUserModel.name
-                ]).where(CUserModel.tele == tele).distinct()
-
-                sql_exp = select([
-                    distinct(CUserModel.id),
-                    CUserModel.name
-                ]).where(CUserModel.tele == tele)
-
-                return sql_exp
-
-            # 6. count, max, min, now相关的时间, random (select 1, select ifnull)
-            def db_func():
-                sql_exp = select([func.count(CUserModel.id)])
-
-                sql_exp = select([func.max(CUserModel.id)])
-
-                sql_exp = select([func.min(CUserModel.id)])
-
-                sql_exp = select([1]).where(CUserModel.tele == tele)
-
-                sql_exp = select([CUserModel]).where(CUserModel.tele == tele)
-
-                sql_exp = select([
-                    CUserModel.id,
-                    func.ifnull(CUserModel.created_at, 100)
-                ]).where(CUserModel.tele == tele)
-
-                return sql_exp
-
-            # 7. select exists
-            def select_exists():
-                exists_sql = select([1]).where(
-                    CClassModel.id == CUserModel.class_id
-                )
-                sql_exp = select([
-                    CUserModel.id,
-                    CUserModel.name
-                ]).where(exists(exists_sql))
-
-                return sql_exp
-
-            # 8. join, outerjoin
-            def inner_join():
-                join_sql = join(
-                    CUserModel,
-                    CClassModel,
-                    CUserModel.class_id == CClassModel.id
-                )
-                sql_exp = select([
-                    CClassModel.name,
-                    CUserModel.name
-                ]).select_from(join_sql)
-
-                return sql_exp
-
-            def left_join():
-                join_sql = join(
-                    CUserModel,
-                    CClassModel,
-                    CUserModel.class_id == CClassModel.id,
-                    isouter=True
-                )
-                sql_exp = select([
-                    CClassModel.name,
-                    CUserModel.name
-                ]).select_from(join_sql)
-
-                return sql_exp
-
-            def right_join():
-                join_sql = join(
-                    CClassModel,
-                    CUserModel,
-                    CClassModel.id == CUserModel.class_id,
-                    isouter=True
-                )
-                sql_exp = select([
-                    CClassModel.name,
-                    CUserModel.name
-                ]).select_from(join_sql)
-
-                return sql_exp
-
-            def do_join():
-                sql_exp = session.query(CUserModel).join(
-                    CClassModel, CUserModel.class_id == CClassModel.id
-                ).filter(
-                    CUserModel.id == user_id
-                )
-
-                return sql_exp
-
             sql_exp = do_join()
             result_proxy = session.execute(sql_exp)
 
@@ -353,6 +408,25 @@ class CUserHandler(CBase):
                     "last_row_id": result_proxy.lastrowid,
                     "inserted_primary_key": result_proxy.inserted_primary_key,
                     "method": "add_class_by_sql_exp"
+                },
+            }
+            self.response_to_web(response_data)
+
+    def add_user_by_sql(self):
+        user_id = self.m_query_params.get("user_id", None)
+        with CSession() as session:
+            session.execute('select * from User')
+            session.execute("insert into test_user(name, age) values('bomo', 13)")
+            session.execute("insert into test_user(name, age) values(:name, :age)",
+                            {'name': 'bomo', 'age': 12})
+
+            # for response
+            response_data = {
+                "status_code": 200,
+                "message": "success",
+                "payload": {
+                    "data": None,
+                    "method": "add_user_by_sql"
                 },
             }
             self.response_to_web(response_data)

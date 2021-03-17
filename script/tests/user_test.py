@@ -24,46 +24,49 @@ def do_user_test():
     # for i in range(count):
     #     threading.Thread(target=query_user_by_id, args=(count,)).start()
 
-    # add_relation()
-    query_user_by_id(1)
+    # add_relationship()
+    query_relationship()
 
 
-def add_relation():
-    url = "%s/v1/api/user" % URL
-    headers = {
+def headers():
+    return {
         "content-type": "application/json",
         "secret_key": "secret_key",
     }
 
+
+def add_relationship():
+    url = "%s/v1/api/user" % URL
     post_data = {
-        "method": "add_relation",
+        "method": "add_relationship",
     }
-    http_client.http_request("post", url, headers=headers,
-                             json=post_data, callback=test_http_back)
+    http_client.http_request("post", url, headers=headers(),
+                             json=post_data, callback=on_response)
+
+
+def query_relationship():
+    url = "%s/v1/api/user" % URL
+    post_data = {
+        "method": "query_relationship",
+        # "phone_id": 1,
+        "company_id": 1,
+    }
+    http_client.http_request("post", url, headers=headers(),
+                             json=post_data, callback=on_response)
 
 
 def add_class_by_sql_exp(i):
     url = "%s/v1/api/user" % URL
-    headers = {
-        "content-type": "application/json",
-        "secret_key": "secret_key",
-    }
-
     post_data = {
         "method": "add_class_by_sql_exp",
         "name": "class_%s" % i
     }
-    http_client.http_request("post", url, headers=headers,
-                             json=post_data, callback=test_http_back)
+    http_client.http_request("post", url, headers=headers(),
+                             json=post_data, callback=on_response)
 
 
 def add_user_by_orm(i=1):
     url = "%s/v1/api/user" % URL
-    headers = {
-        "content-type": "application/json",
-        "secret_key": "secret_key",
-    }
-
     post_data = {
         "method": "add_user",
         "name": "orm_liuliu_%d" % i,
@@ -71,17 +74,12 @@ def add_user_by_orm(i=1):
         "tele": 11234 + i,
         "addr": "guangzhou"
     }
-    http_client.http_request("post", url, headers=headers,
-                             json=post_data, callback=test_http_back)
+    http_client.http_request("post", url, headers=headers(),
+                             json=post_data, callback=on_response)
 
 
 def add_user_by_sql_exp(i=1):
     url = "%s/v1/api/user" % URL
-    headers = {
-        "content-type": "application/json",
-        "secret_key": "secret_key",
-    }
-
     post_data = {
         "method": "add_user_by_sql_exp",
         "class_id": i + 1,
@@ -90,30 +88,22 @@ def add_user_by_sql_exp(i=1):
         "tele": 44567 + i,
         "addr": "guangzhou"
     }
-    http_client.http_request("post", url, headers=headers,
-                             json=post_data, callback=test_http_back)
+    http_client.http_request("post", url, headers=headers(),
+                             json=post_data, callback=on_response)
 
 
 def get_user_by_id(i=1):
     url = "%s/v1/api/user?method=get_user_by_id" % URL
-    headers = {
-        "content-type": "application/json",
-        "secret_key": "secret_key",
-    }
     url = "%s&user_id=%d" % (url, i)
-    http_client.http_request("get", url, headers=headers, callback=test_http_back)
+    http_client.http_request("get", url, headers=headers(), callback=on_response)
 
 
 def query_user_by_id(i=1):
     url = "%s/v1/api/user?method=query_user_by_id" % URL
-    headers = {
-        "content-type": "application/json",
-        "secret_key": "secret_key",
-    }
     url = "%s&user_id=%d&tele=44568" % (url, i)
-    http_client.http_request("get", url, headers=headers, callback=test_http_back)
+    http_client.http_request("get", url, headers=headers(), callback=on_response)
 
 
-def test_http_back(result, data):
+def on_response(result, data):
     data = json.dumps(data, sort_keys=True, indent=2)
-    print("\n\ntest_http_back result:%s data:%s" % (result, data))
+    print("\n\non_response result:%s data:%s" % (result, data))
