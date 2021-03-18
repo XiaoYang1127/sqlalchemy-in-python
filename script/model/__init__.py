@@ -7,7 +7,9 @@ from db.orm_db import mysql_engine, CSession
 from model.base import Base, CTimestampMixin
 from model.class_model import CClassModel
 from model.user_model import CUserModel
-from model.relation_model import CCompany, CPhone
+from model.one_to_many import COTMCompany, COTMPhone
+from model.one_to_one import COTOCompany, COTOPhone
+from model.many_to_many import CMTMCompany, CMTMPhone
 
 
 def init_model():
@@ -16,5 +18,15 @@ def init_model():
 
     CClassModel.create_table(mysql_engine())
     CUserModel.create_table(mysql_engine())
-    CCompany.create_table(mysql_engine())
-    CPhone.create_table(mysql_engine())
+
+    # on_to_many
+    COTMCompany.create_table(mysql_engine())
+    COTMPhone.create_table(mysql_engine())
+
+    # one_to_one
+    COTOCompany.create_table(mysql_engine())
+    COTOPhone.create_table(mysql_engine())
+
+    # many_to_many
+    CMTMCompany.create_table(mysql_engine())
+    CMTMPhone.create_table(mysql_engine())
