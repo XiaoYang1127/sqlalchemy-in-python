@@ -3,9 +3,6 @@
 
 import time
 
-import sqlalchemy.exc
-
-from sqlalchemy import exc
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -43,7 +40,7 @@ class CSession():
 
 
 # 初始化
-if not "g_orm_db" in globals():
+if "g_orm_db" not in globals():
     g_orm_db = 1
     engine = create_engine(
         db_url(), pool_size=100, max_overflow=100,
