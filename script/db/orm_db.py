@@ -59,7 +59,7 @@ if "session_factory" not in globals():
     # flush：将当前 session 存在的变更发送给数据库，即让数据库执行 SQL 语句
     # commit, 提交一个事务。一个事务可能有一条 SQL 或者多条 SQL 语句
     # autoflush=True，session 进行查询之前会自动吧当前累计的修改发送到数据库，即自动执行一次 flush 的操作
-    # autocommit=True, 需要显式调用 session.begin() 方法来开启事务；否则 ession 在实例化之后即处于begin状态
+    # autocommit=True, 需要显式调用 session.begin() 方法来开启事务；否则 session 在实例化之后即处于begin状态
     # expire_on_commit=True，commit 之后所有实例都会过期，之后再访问这些过期实例的属性时，SQLAlchemy 会重新去数据库加载实例对应的数据记录
     session_factory = scoped_session(sessionmaker(
         bind=engine,

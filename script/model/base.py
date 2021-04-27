@@ -10,6 +10,7 @@ from sqlalchemy import Column, Integer, DateTime, event, func, ForeignKey
 from sqlalchemy.sql.expression import Insert, Update, Delete, Select
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.dialects.mysql import INTEGER
 
 import db.redis_db
 
@@ -19,7 +20,10 @@ class CTimestampMixin(object):
     skip_updated_at = 0
 
     created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now())
+    updated_at = Column(
+        DateTime, default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now())
 
 
 class CBase(object):
@@ -32,7 +36,6 @@ class CBase(object):
         index：索引
         nullable：可空
         primary_key：是否主键
-
     """
 
     ex_time = 24 * 60 * 60
@@ -41,11 +44,15 @@ class CBase(object):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __mapper_args__ = {'always_refresh': True}
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column("id", INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
     @classmethod
-    def create_table(self, engine):
-        self.metadata.create_all(engine)
+    def create_table(cls, engine):
+        cls.metadata.create_all(engine)
+
+    @classmethod
+    def drop_db(cls, engine):
+        cls.metadata.drop_all(engine)
 
     def save(self):
         raise NotImplementedError("save undefined")

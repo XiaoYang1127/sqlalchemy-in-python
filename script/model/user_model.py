@@ -1,10 +1,9 @@
-
 from sqlalchemy import Column, Integer, String
 
 from model import Base, CTimestampMixin
 
 
-class CUserModel(Base, CTimestampMixin):
+class CUserModel(CTimestampMixin, Base):
     __tablename__ = "test_user"
 
     class_id = Column(Integer, nullable=False, comment="班级id")

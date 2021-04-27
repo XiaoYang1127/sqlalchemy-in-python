@@ -55,6 +55,6 @@
   - 为了避免第一次请求建立连接较慢，我们采取了`强制预连接`的处理，即每次起服后，创建一定数量的数据连接
   - 参考官网：https://www.osgeo.cn/sqlalchemy/core/pooling.html
 
-## 7. django ORM
+## 7. 高级用法
 
-## 8. 异步 IO 的 ORM
+- [详情](./doc/advanced_usage.md)
